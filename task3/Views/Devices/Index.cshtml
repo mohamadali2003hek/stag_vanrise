@@ -1,0 +1,297 @@
+﻿<!DOCTYPE html>
+<html ng-app="deviceApp">
+
+<head>
+
+    <title>Devices</title>
+
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+</head>
+
+
+<body ng-controller="DeviceController">
+
+
+    <div class="container">
+
+        <h2>Devices</h2>
+
+
+        <!-- Search -->
+
+        <form>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="searchText">
+
+            <br>
+
+            <button type="button"
+                    class="btn btn-default"
+                    ng-click="searchDevices()">
+
+                Search
+
+            </button>
+
+        </form>
+
+
+        <br>
+
+
+        <!-- Add -->
+
+        <form>
+
+            <label>Add Device</label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="nameInput">
+
+            <br>
+
+            <button type="button"
+                    class="btn btn-primary"
+                    ng-click="addDevice()">
+
+                Add
+
+            </button>
+
+        </form>
+
+
+        <br>
+
+
+        <!-- Devices Table -->
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                <tr ng-repeat="device in devices">
+
+                    <td>
+                        {{ device.id }}
+                    </td>
+
+                    <td>
+                        {{ device.name }}
+                    </td>
+
+                    <td>
+
+                        <button class="btn btn-warning"
+                                ng-click="editDevice(device)">
+
+                            Edit
+
+                        </button>
+
+
+                        <button class="btn btn-danger"
+                                ng-click="deleteDevice(device)">
+
+                            Delete
+
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+
+    <!-- AngularJS -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js">
+    </script>
+
+
+    <!-- UI Bootstrap -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.3/ui-bootstrap-tpls.min.js">
+    </script>
+
+
+
+    <script>
+
+            var app = angular.module("deviceApp", ["ui.bootstrap"]);
+
+
+            app.controller("DeviceController", function ($scope, $modal, $http) {
+
+
+                // Get All Devices
+
+                $http.get("/api/devices")
+                    .then(function (response) {
+
+                        $scope.devices = response.data;
+
+                    });
+
+
+                // Add
+
+                $scope.addDevice = function () {
+
+                    var newDevice = {
+
+                        name: $scope.nameInput
+
+                    };
+
+                    $http.post("/api/devices", newDevice)
+                        .then(function (response) {
+
+                            $scope.devices.push(response.data);
+
+                            $scope.nameInput = "";
+
+                        });
+
+                };
+
+
+                // Delete
+
+                $scope.deleteDevice = function (device) {
+
+                    var index = $scope.devices.indexOf(device);
+
+                    $scope.devices.splice(index, 1);
+
+                };
+
+
+                // Search
+
+                $scope.searchDevices = function () {
+
+                    var searchText = $scope.searchText.toLowerCase();
+
+                    $scope.devices = $scope.devices.filter(function (device) {
+
+                        return device.name
+                            .toLowerCase()
+                            .includes(searchText);
+
+                    });
+
+                };
+
+
+                // Edit
+
+                $scope.editDevice = function (device) {
+
+                    $modal.open({
+
+                        template:
+
+                            '<div class="modal-header">' +
+
+                                '<h3>Edit Device</h3>' +
+
+                            '</div>' +
+
+                            '<div class="modal-body">' +
+
+                                '<label>Device Name</label>' +
+
+                                '<input type="text" ' +
+
+                                       'class="form-control" ' +
+
+                                       'ng-model="modalDevice.name">' +
+
+                            '</div>' +
+
+                            '<div class="modal-footer">' +
+
+                                '<button class="btn btn-primary" ' +
+
+                                        'ng-click="save()">' +
+
+                                    'Save' +
+
+                                '</button>' +
+
+                                '<button class="btn btn-default" ' +
+
+                                        'ng-click="cancel()">' +
+
+                                    'Cancel' +
+
+                                '</button>' +
+
+                            '</div>',
+
+
+                        controller: function ($scope, $modalInstance, $http) {
+
+                            $scope.modalDevice = angular.copy(device);
+
+
+                            $scope.save = function () {
+
+                                $http.post("/api/devices/update", $scope.modalDevice)
+                                    .then(function () {
+
+                                        device.name = $scope.modalDevice.name;
+
+                                        $modalInstance.close();
+
+                                    });
+
+                            };
+
+
+                            $scope.cancel = function () {
+
+                                $modalInstance.dismiss();
+
+                            };
+
+                        }
+
+                    });
+
+                };
+
+
+            });
+
+    </script>
+
+
+</body>
+
+</html>
