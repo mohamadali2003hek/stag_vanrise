@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Phone Numbers";
+    Layout = "_Layout";
+}
+
+<div ng-app="phoneApp" ng-controller="PhoneController" class="container">
+
+    <h2>Phone Numbers</h2>
+
+    <div class="alert alert-danger" ng-if="errorMessage">{{ errorMessage }}</div>
+
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-md-4">
+            <input type="text" class="form-control" placeholder="Search by number" ng-model="filters.number">
+        </div>
+        <div class="col-md-4">
+            <device-selector selected-id="filters.deviceId" show-all="true" get-data="getFilterDevice"></device-selector>
+        </div>
+        <div class="col-md-4">
+            <button type="button" class="btn btn-primary" ng-click="filterPhones()">Search</button>
+            <button type="button" class="btn btn-default" ng-click="resetFilters()">Reset</button>
+        </div>
+    </div>
+
+    <button type="button" class="btn btn-success" ng-click="openModal()" style="margin-bottom: 15px;">Add Phone Number</button>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr><th>ID</th><th>Number</th><th>Device</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="p in phones">
+                <td>{{ p.id }}</td>
+                <td>{{ p.number }}</td>
+                <td>{{ p.deviceName }}</td>
+                <td>
+                    <button type="button" class="btn btn-warning btn-sm" ng-click="openModal(p)">Edit</button>
+                    <button type="button" class="btn btn-danger btn-sm" ng-click="deletePhone(p.id)">Delete</button>
+                </td>
+            </tr>
+            <tr ng-if="phones.length === 0">
+                <td colspan="4" class="text-center">No phone numbers found.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script type="text/ng-template" id="phoneModal.html">
+        <form name="phoneForm" novalidate>
+        <div class="modal-header">
+        <h3 class="modal-title">{{ isEdit ? 'Edit Phone Number' : 'Add Phone Number' }}</h3>
+        </div>
+        <div class="modal-body">
+        <div class="form-group">
+        <label>Number</label>
+        <input type="text" class="form-control" ng-model="phone.number" required>
+        </div>
+        <div class="form-group">
+        <label>Device</label>
+        <device-selector selected-id="phone.deviceId" get-data="getDevice"></device-selector>
+        </div>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-primary" ng-click="save()"
+        ng-disabled="phoneForm.$invalid || phone.deviceId == null">Save</button>
+        <button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button>
+        </div>
+        </form>
+    </script>
+</div>
+
+@* إذا _Layout فيه Angular أصلاً، احذف هدول السطرين *@
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.3/ui-bootstrap-tpls.min.js"></script>
+<script src="@Url.Content("~/js/directives/selectors.js")"></script>
+
+<script>
+    var app = angular.module("phoneApp", ["ui.bootstrap", "selectors"]);
+
+    app.controller("PhoneController", function ($scope, $http, $uibModal) {
+
+    $scope.phones = [];
+    $scope.errorMessage = "";
+    $scope.filters = { number: "", deviceId: null };
+    $scope.getFilterDevice = null;
+
+    $scope.loadPhones = function () {
+    $http.get("/api/PhoneNumbersApi").then(function (r) { $scope.phones = r.data; });
+    };
+
+    $scope.filterPhones = function () {
+    var deviceId = $scope.getFilterDevice ? $scope.getFilterDevice() : null;
+    var params = {};
+    if ($scope.filters.number) params.number = $scope.filters.number;
+    if (deviceId !== null && deviceId !== undefined && deviceId !== "") params.deviceId = deviceId;
+
+    $http.get("/api/PhoneNumbersApi/filter", { params: params })
+    .then(function (r) { $scope.phones = r.data; });
+    };
+
+    $scope.resetFilters = function () {
+    $scope.filters.number = "";
+    $scope.filters.deviceId = null;
+    $scope.loadPhones();
+    };
+
+    $scope.openModal = function (phone) {
+    var modal = $uibModal.open({
+    animation: false,
+    templateUrl: "phoneModal.html",
+    controller: "PhoneModalController",
+    resolve: { phone: function () { return phone ? angular.copy(phone) : null; } }
+    });
+    modal.result.then(function () { $scope.loadPhones(); }, function () { });
+    };
+
+   
+    $scope.deletePhone = function (id) {
+    if (!confirm("Are you sure you want to delete this phone number?")) return;
+
+    $http.delete("/api/PhoneNumbersApi/" + id).then(function () {
+    $scope.loadPhones();
+    }, function (err) {
+    alert(typeof err.data === "string" ? err.data : "Failed to delete.");
+    });
+    };
+
+    $scope.loadPhones();
+    });
+
+    app.controller("PhoneModalController", function ($scope, $http, $uibModalInstance, phone) {
+
+    $scope.isEdit = phone !== null;
+    $scope.phone = phone || { number: "", deviceId: null };
+    $scope.getDevice = null;
+
+    $scope.save = function () {
+    var deviceId = $scope.getDevice ? $scope.getDevice() : $scope.phone.deviceId;
+
+    var payload = { id: $scope.phone.id, number: $scope.phone.number, deviceId: deviceId };
+    var url = $scope.isEdit ? "/api/PhoneNumbersApi/update" : "/api/PhoneNumbersApi";
+
+    $http.post(url, payload).then(function () {
+    $uibModalInstance.close();
+    }, function (err) {
+    alert(typeof err.data === "string" ? err.data : "Save failed.");
+    });
+    };
+
+    $scope.cancel = function () { $uibModalInstance.dismiss("cancel"); };
+    });
+</script>

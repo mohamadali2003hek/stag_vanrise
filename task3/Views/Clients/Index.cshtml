@@ -1,0 +1,341 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<div ng-app="clientApp" ng-controller="ClientController" class="container">
+
+    <h2>Clients</h2>
+
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-md-4">
+            <input type="text" class="form-control" placeholder="Search by name" ng-model="filters.name">
+        </div>
+        <div class="col-md-4">
+            <client-type-selector selected-type="filters.type" show-all="true" get-data="getFilterType"></client-type-selector>
+        </div>
+        <div class="col-md-4">
+            <button type="button" class="btn btn-primary" ng-click="filterClients()">Search</button>
+            <button type="button" class="btn btn-default" ng-click="resetFilters()">Reset</button>
+        </div>
+    </div>
+
+    <button type="button" class="btn btn-success" ng-click="openAddModal()" style="margin-bottom: 15px;">Add Client</button>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Type</th><th>Birth Date</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="client in clients">
+                <td>{{ client.id }}</td>
+                <td>{{ client.name }}</td>
+                <td>{{ client.type === 0 ? 'Individual' : 'Organization' }}</td>
+                <td>{{ client.birthDate | date:'yyyy-MM-dd' }}</td>
+                <td>
+                    <button type="button" class="btn btn-info btn-sm" ng-click="openReserveModal(client)">Reserve</button>
+                    <button type="button" class="btn btn-primary btn-sm" ng-click="openReservationsModal(client)">Reservations</button>
+                    <button type="button" class="btn btn-warning btn-sm" ng-click="openEditModal(client)">Edit</button>
+                    <button type="button" class="btn btn-danger btn-sm" ng-click="deleteClient(client.id)">Delete</button>
+                </td>
+            </tr>
+            <tr ng-if="clients.length === 0">
+                <td colspan="5" class="text-center">No clients found.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Add/Edit client modal -->
+    <script type="text/ng-template" id="clientModal.html">
+        <div class="modal-header">
+        <h3 class="modal-title">{{ isEdit ? 'Edit Client' : 'Add Client' }}</h3>
+        </div>
+        <div class="modal-body">
+        <form name="clientForm" novalidate>
+        <div class="form-group">
+        <label>Name</label>
+        <input type="text" class="form-control" ng-model="client.name" required>
+        </div>
+        <div class="form-group">
+        <label>Type</label>
+        <client-type-selector selected-type="client.type" get-data="getClientType"></client-type-selector>
+        </div>
+        <div class="form-group" ng-if="client.type === 0">
+        <label>Birth Date <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" name="birthDate"
+        ng-model="client.birthDate" ng-required="client.type === 0">
+        </div>
+        </form>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-primary" ng-click="save()" ng-disabled="clientForm.$invalid">Save</button>
+        <button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button>
+        </div>
+    </script>
+
+    <!-- Reserve modal: الأرقام الفاضية بس -->
+    <script type="text/ng-template" id="reserveModal.html">
+        <div class="modal-header">
+        <h3 class="modal-title">Reserve a number for {{ client.name }}</h3>
+        </div>
+        <div class="modal-body">
+        <div class="alert alert-danger" ng-if="errorMessage">{{ errorMessage }}</div>
+
+        <div ng-if="freeNumbers.length === 0" class="text-muted">No free phone numbers available.</div>
+
+        <div class="form-group" ng-if="freeNumbers.length > 0">
+        <label>Free phone number</label>
+        <select class="form-control" ng-model="selected.phoneNumberId"
+        ng-options="p.id as p.number for p in freeNumbers">
+        <option value="">-- choose a number --</option>
+        </select>
+        <p class="help-block">The reservation starts today with no end date.</p>
+        </div>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-primary" ng-click="reserve()"
+        ng-disabled="!selected.phoneNumberId">Reserve</button>
+        <button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button>
+        </div>
+    </script>
+
+    <!-- Active reservations modal: إنهاء الحجز -->
+    <script type="text/ng-template" id="clientReservationsModal.html">
+        <div class="modal-header">
+        <h3 class="modal-title">Active reservations: {{ client.name }}</h3>
+        </div>
+        <div class="modal-body">
+        <div class="alert alert-danger" ng-if="errorMessage">{{ errorMessage }}</div>
+
+        <div ng-if="reservations.length === 0" class="text-muted">This client has no active reservations.</div>
+
+        <table class="table table-bordered" ng-if="reservations.length > 0">
+        <thead><tr><th>Phone Number</th><th>BED</th><th>EED</th><th></th></tr></thead>
+        <tbody>
+        <tr ng-repeat="r in reservations">
+        <td>{{ r.phoneNumber }}</td>
+        <td>{{ r.bed | date:'yyyy-MM-dd' }}</td>
+        <td>{{ r.eed ? (r.eed | date:'yyyy-MM-dd') : 'No end date' }}</td>
+        <td>
+        <button type="button" class="btn btn-warning btn-sm" ng-click="endReservation(r)">
+        End reservation
+        </button>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-default" ng-click="close()">Close</button>
+        </div>
+    </script>
+
+</div>
+
+@* إذا _Layout فيه Angular أصلاً، احذف هدول السطرين *@
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.3/ui-bootstrap-tpls.min.js"></script>
+
+<script>
+    var app = angular.module("clientApp", ["ui.bootstrap"]);
+
+    // ===== Client Type Selector Directive =====
+    app.directive("clientTypeSelector", function () {
+    return {
+    restrict: "E",
+    scope: { selectedType: "=", getData: "=" },
+    template: function (element, attrs) {
+    return '<select class="form-control" ng-model="selectedType" ' +
+    'ng-options="t.id as t.name for t in types">' +
+    (attrs.showAll === "true" ? '<option value="">All Types</option>' : '') +
+    '</select>';
+    },
+    link: function (scope) {
+    scope.types = [
+    { id: 0, name: "Individual" },
+    { id: 1, name: "Organization" }
+    ];
+    scope.getData = function () { return scope.selectedType; };
+    }
+    };
+    });
+
+    function errText(err, fallback) {
+    return (err && typeof err.data === "string" && err.data) ? err.data : fallback;
+    }
+
+    // ===== Main Controller =====
+    app.controller("ClientController", function ($scope, $http, $uibModal) {
+
+    $scope.clients = [];
+    $scope.filters = { name: "", type: null };
+    $scope.getFilterType = null;
+
+    $scope.loadClients = function () {
+    $http.get("/api/ClientsApi").then(function (r) { $scope.clients = r.data; });
+    };
+
+    $scope.filterClients = function () {
+    var type = $scope.getFilterType ? $scope.getFilterType() : $scope.filters.type;
+    var params = {};
+    if ($scope.filters.name) params.name = $scope.filters.name;
+    if (type !== null && type !== undefined && type !== "") params.type = type;
+
+    $http.get("/api/ClientsApi/filter", { params: params }).then(function (r) { $scope.clients = r.data; });
+    };
+
+    $scope.resetFilters = function () {
+    $scope.filters.name = "";
+    $scope.filters.type = null;
+    $scope.loadClients();
+    };
+
+    function openModal(client, isEdit) {
+    var modalInstance = $uibModal.open({
+    animation: false,
+    templateUrl: "clientModal.html",
+    controller: "ClientModalController",
+    resolve: {
+    client: function () { return client; },
+    isEdit: function () { return isEdit; }
+    }
+    });
+    modalInstance.result.then(function () { $scope.loadClients(); }, function () { });
+    }
+
+    $scope.openAddModal = function () {
+    openModal({ name: "", type: 0, birthDate: null }, false);
+    };
+
+    $scope.openEditModal = function (client) {
+    var copy = angular.copy(client);
+    if (copy.birthDate) {
+    copy.birthDate = new Date(String(copy.birthDate).substring(0, 10) + "T00:00:00");
+    }
+    openModal(copy, true);
+    };
+
+    $scope.deleteClient = function (id) {
+    if (!confirm("Are you sure you want to delete this client?")) return;
+
+    $http.delete("/api/ClientsApi/" + id).then(function () {
+    $scope.loadClients();
+    }, function (err) {
+    alert(errText(err, "Failed to delete."));
+    });
+    };
+
+    $scope.openReserveModal = function (client) {
+    $uibModal.open({
+    animation: false,
+    templateUrl: "reserveModal.html",
+    controller: "ReserveModalController",
+    resolve: { client: function () { return client; } }
+    }).result.then(function () { }, function () { });
+    };
+
+    $scope.openReservationsModal = function (client) {
+    $uibModal.open({
+    animation: false,
+    templateUrl: "clientReservationsModal.html",
+    controller: "ClientReservationsController",
+    resolve: { client: function () { return client; } }
+    }).result.then(function () { }, function () { });
+    };
+
+    $scope.loadClients();
+    });
+
+    // ===== Add/Edit Modal Controller =====
+    app.controller("ClientModalController", function ($scope, $http, $filter, $uibModalInstance, client, isEdit) {
+
+    $scope.client = angular.copy(client);
+    $scope.isEdit = isEdit;
+    $scope.getClientType = null;
+
+    $scope.save = function () {
+    var type = $scope.getClientType ? $scope.getClientType() : $scope.client.type;
+
+    if (type === 0 && !$scope.client.birthDate) {
+    alert("Birth Date is required for an Individual.");
+    return;
+    }
+
+    var payload = {
+    id: $scope.client.id,
+    name: $scope.client.name,
+    type: type,
+    birthDate: (type === 0 && $scope.client.birthDate)
+    ? $filter("date")($scope.client.birthDate, "yyyy-MM-dd")
+    : null
+    };
+
+    var url = isEdit ? "/api/ClientsApi/update" : "/api/ClientsApi";
+
+    $http.post(url, payload).then(function () {
+    $uibModalInstance.close();
+    }, function (err) {
+    alert(errText(err, "Save failed."));
+    });
+    };
+
+    $scope.cancel = function () { $uibModalInstance.dismiss("cancel"); };
+    });
+
+    // ===== Reserve Modal Controller =====
+    app.controller("ReserveModalController", function ($scope, $http, $uibModalInstance, client) {
+
+    $scope.client = client;
+    $scope.freeNumbers = [];
+    $scope.selected = { phoneNumberId: null };
+    $scope.errorMessage = "";
+
+    $http.get("/api/PhoneNumbersApi/free").then(function (r) { $scope.freeNumbers = r.data; });
+
+    $scope.reserve = function () {
+    $scope.errorMessage = "";
+    $http.post("/api/ClientsApi/" + client.id + "/reserve",
+    { phoneNumberId: $scope.selected.phoneNumberId })
+    .then(function () {
+    $uibModalInstance.close();
+    }, function (err) {
+    $scope.errorMessage = errText(err, "Reserve failed.");
+    // حدّث القائمة لأنو الرقم ممكن يكون انحجز
+    $http.get("/api/PhoneNumbersApi/free").then(function (r) {
+    $scope.freeNumbers = r.data;
+    $scope.selected.phoneNumberId = null;
+    });
+    });
+    };
+
+    $scope.cancel = function () { $uibModalInstance.dismiss("cancel"); };
+    });
+
+    // ===== Client Active Reservations Controller =====
+    app.controller("ClientReservationsController", function ($scope, $http, $uibModalInstance, client) {
+
+    $scope.client = client;
+    $scope.reservations = [];
+    $scope.errorMessage = "";
+
+    function load() {
+    $http.get("/api/ClientsApi/" + client.id + "/reservations")
+    .then(function (r) { $scope.reservations = r.data; });
+    }
+
+    $scope.endReservation = function (r) {
+    if (!confirm("End the reservation of " + r.phoneNumber + " today?")) return;
+    $scope.errorMessage = "";
+
+    $http.post("/api/ClientsApi/end-reservation/" + r.id).then(function () {
+    load();
+    }, function (err) {
+    $scope.errorMessage = errText(err, "Failed to end the reservation.");
+    load();
+    });
+    };
+
+    $scope.close = function () { $uibModalInstance.dismiss("close"); };
+
+    load();
+    });
+</script>

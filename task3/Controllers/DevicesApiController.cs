@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Xml.Linq;
+using task3.Data;
 using task3.Models;
 
 namespace task3.Controllers
@@ -10,37 +10,40 @@ namespace task3.Controllers
     public class DevicesApiController : ControllerBase
     {
 
+        private readonly ADOdotNET _ADOdotNET;
 
+        public DevicesApiController(ADOdotNET ADOdotNET)
+        {
+            _ADOdotNET = ADOdotNET;
+        }
         [HttpGet]
-        public List<Device> GetAllDevices() => Data.DeviceData.devices;
+        public List<Device> GetAllDevices() => _ADOdotNET.GetAllDevices();
 
         [HttpGet("filter")]
         public List<Device> GetFilteredDevices(string name)
         {
-            return Data.DeviceData.devices.Where(d => d.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
+            return _ADOdotNET.GetFilteredDevices(name);
         }
 
         [HttpPost]
         public Device AddDevice(Device device)
         {
-            device.Id = Data.DeviceData.devices.Max(d => d.Id) + 1;
-            Data.DeviceData.devices.Add(device);
-            return device;
+            return _ADOdotNET.AddDevice(device);
         }
 
         [HttpPost("update")]
         public Device UpdateDevice(Device device)
         {
-            var existingDevice =
-                Data.DeviceData.devices.FirstOrDefault(d => d.Id == device.Id);
+            return _ADOdotNET.UpdateDevice(device);
+        }
 
-            if (existingDevice != null)
-            {
-                existingDevice.Name = device.Name;
-                return existingDevice;
-            }
+        [HttpDelete("{id:int}")]
+        public IActionResult Delete(int id)
+        {
+            if (!_ADOdotNET.DeleteDevice(id))
+                return Conflict("Cannot delete this device: it has phone numbers assigned to it.");
 
-            return null;
+            return Ok();
         }
     }
 }

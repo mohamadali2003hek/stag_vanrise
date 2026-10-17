@@ -1,0 +1,80 @@
+﻿@{
+    ViewData["Title"] = "Phone Number Reservations";
+    Layout = "_Layout";
+}
+
+<div ng-app="reservationApp" ng-controller="ReservationController" class="container">
+
+    <h2>Phone Number Reservations</h2>
+
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-md-4">
+            <client-selector selected-id="filters.clientId" show-all="true" get-data="getClient"></client-selector>
+        </div>
+        <div class="col-md-4">
+            <phone-number-selector selected-id="filters.phoneNumberId" show-all="true" get-data="getPhoneNumber"></phone-number-selector>
+        </div>
+        <div class="col-md-4">
+            <button type="button" class="btn btn-primary" ng-click="filterReservations()">Search</button>
+            <button type="button" class="btn btn-default" ng-click="resetFilters()">Reset</button>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr><th>ID</th><th>Client</th><th>Phone Number</th><th>BED</th><th>EED</th></tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="r in reservations">
+                <td>{{ r.id }}</td>
+                <td>{{ r.clientName }}</td>
+                <td>{{ r.phoneNumber }}</td>
+                <td>{{ r.bed | date:'yyyy-MM-dd' }}</td>
+                <td>{{ r.eed ? (r.eed | date:'yyyy-MM-dd') : 'No end date' }}</td>
+            </tr>
+            <tr ng-if="reservations.length === 0">
+                <td colspan="5" class="text-center">No reservations found.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+@* إذا _Layout فيه Angular أصلاً، احذف هدول السطرين *@
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.3/ui-bootstrap-tpls.min.js"></script>
+<script src="@Url.Content("~/js/directives/selectors.js")"></script>
+
+<script>
+    var app = angular.module("reservationApp", ["ui.bootstrap", "selectors"]);
+
+    app.controller("ReservationController", function ($scope, $http) {
+
+    $scope.reservations = [];
+    $scope.filters = { clientId: null, phoneNumberId: null };
+    $scope.getClient = null;
+    $scope.getPhoneNumber = null;
+
+    $scope.loadReservations = function () {
+    $http.get("/api/PhoneNumberReservationsApi").then(function (r) { $scope.reservations = r.data; });
+    };
+
+    $scope.filterReservations = function () {
+    var clientId = $scope.getClient ? $scope.getClient() : null;
+    var phoneId = $scope.getPhoneNumber ? $scope.getPhoneNumber() : null;
+    var params = {};
+    if (clientId !== null && clientId !== undefined && clientId !== "") params.clientId = clientId;
+    if (phoneId !== null && phoneId !== undefined && phoneId !== "") params.phoneNumberId = phoneId;
+
+    $http.get("/api/PhoneNumberReservationsApi/filter", { params: params })
+    .then(function (r) { $scope.reservations = r.data; });
+    };
+
+    $scope.resetFilters = function () {
+    $scope.filters.clientId = null;
+    $scope.filters.phoneNumberId = null;
+    $scope.loadReservations();
+    };
+
+    $scope.loadReservations();
+    });
+</script>
