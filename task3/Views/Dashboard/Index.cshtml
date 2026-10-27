@@ -1,0 +1,331 @@
+﻿
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="fw-bold mb-2">Management Overview</h1>
+            <p class="dashboard-subtitle">
+                Devices, clients, phone numbers and reservations.
+            </p>
+        </div>
+
+        <span class="badge text-bg-secondary">Dashboard</span>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card summary-card" style="--accent: #60a5fa">
+            <div class="summary-label">Total Clients</div>
+            <p class="summary-value" id="totalClients">—</p>
+        </div>
+
+        <div class="dashboard-card summary-card" style="--accent: #34d399">
+            <div class="summary-label">Total Devices</div>
+            <p class="summary-value" id="totalDevices">—</p>
+        </div>
+
+        <div class="dashboard-card summary-card" style="--accent: #fbbf24">
+            <div class="summary-label">Phone Numbers</div>
+            <p class="summary-value" id="totalPhoneNumbers">—</p>
+        </div>
+
+        <div class="dashboard-card summary-card" style="--accent: #c4b5fd">
+            <div class="summary-label">Active Reservations</div>
+            <p class="summary-value" id="activeReservations">—</p>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="dashboard-section dashboard-chart-grid">
+        <section class="dashboard-card">
+            <h2>Clients by Type</h2>
+            <div class="chart-container">
+                <canvas id="clientsByTypeChart"></canvas>
+            </div>
+        </section>
+
+        <section class="dashboard-card">
+            <h2>Reserved vs Unreserved</h2>
+            <div class="chart-container">
+                <canvas id="reservationStatusChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <div class="dashboard-section">
+        <section class="dashboard-card">
+            <h2>Phone Numbers by Device</h2>
+            <div class="chart-container">
+                <canvas id="phoneNumbersByDeviceChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- Recent Reservations -->
+    <div class="dashboard-section">
+        <section class="dashboard-card">
+            <h2>Recent Reservations</h2>
+
+            <div class="table-responsive">
+                <table class="table dashboard-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Phone Number</th>
+                            <th>Client</th>
+                            <th>BED</th>
+                            <th>EED</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentReservationsBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                Loading reservations...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // 1. Summary Cards
+                document.getElementById('totalClients').textContent =
+                    data.summary.totalClients;
+
+                document.getElementById('totalDevices').textContent =
+                    data.summary.totalDevices;
+
+                document.getElementById('totalPhoneNumbers').textContent =
+                    data.summary.totalPhoneNumbers;
+
+                document.getElementById('activeReservations').textContent =
+                    data.summary.activeReservations;
+
+                // 2. Clients by Type
+                new Chart(document.getElementById('clientsByTypeChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.clientsByType.map(item =>
+                            item.type === 0 ? 'Individual' : 'Organization'
+                        ),
+                        datasets: [{
+                            label: 'Clients',
+                            data: data.clientsByType.map(item =>
+                                item.numberOfClients
+                            ),
+                            backgroundColor: ['#60a5fa', '#c4b5fd'],
+                            borderColor: '#151a24',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#cbd5e1',
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 3. Reserved vs Unreserved
+                const reservationLabels = ['Reserved', 'Unreserved'];
+
+                const reservationCounts = reservationLabels.map(status => {
+                    const item = data.reservationStatus.find(
+                        r => r.status.toLowerCase() === status.toLowerCase()
+                    );
+
+                    return item ? item.count : 0;
+                });
+
+                new Chart(document.getElementById('reservationStatusChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: reservationLabels,
+                        datasets: [{
+                            label: 'Phone Numbers',
+                            data: reservationCounts,
+                            backgroundColor: ['#34d399', '#fbbf24'],
+                            borderRadius: 6,
+                            maxBarThickness: 65
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#cbd5e1' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#94a3b8',
+                                    precision: 0
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.12)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 4. Phone Numbers by Device
+                new Chart(document.getElementById('phoneNumbersByDeviceChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.phoneNumbersByDevice.map(item =>
+                            item.deviceName
+                        ),
+                        datasets: [{
+                            label: 'Phone Numbers',
+                            data: data.phoneNumbersByDevice.map(item =>
+                                item.count
+                            ),
+                            backgroundColor: '#60a5fa',
+                            borderRadius: 6,
+                            maxBarThickness: 70
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#cbd5e1' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#94a3b8',
+                                    precision: 0
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.12)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 5. Recent Reservations
+                const tableBody = document.getElementById(
+                    'recentReservationsBody'
+                );
+
+                const reservations = data.recentReservations ?? [];
+
+                if (reservations.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                No reservations found.
+                            </td>
+                        </tr>`;
+                } else {
+                    const formatDate = value => {
+                        if (!value) return '—';
+
+                        const date = new Date(value);
+
+                        if (Number.isNaN(date.getTime())) return '—';
+
+                        return date.toLocaleDateString();
+                    };
+
+                    const escapeHtml = value =>
+                        String(value ?? '—').replace(/[&<>"']/g, char => ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#39;'
+                        })[char]);
+
+                    const now = new Date();
+
+                    tableBody.innerHTML = reservations.map(r => {
+                        const bed = new Date(r.bed);
+                        const eed = r.eed ? new Date(r.eed) : null;
+
+                        const isActive =
+                            !Number.isNaN(bed.getTime()) &&
+                            bed <= now &&
+                            (!eed || eed > now);
+
+                        const status = isActive ? 'Active' : 'Ended';
+                        const badgeClass = isActive
+                            ? 'text-bg-success'
+                            : 'text-bg-secondary';
+
+                        return `
+                            <tr>
+                                <td>${escapeHtml(r.phoneNumber)}</td>
+                                <td>${escapeHtml(r.clientName)}</td>
+                                <td>${formatDate(r.bed)}</td>
+                                <td>${formatDate(r.eed)}</td>
+                                <td>
+                                    <span class="badge ${badgeClass}">
+                                        ${status}
+                                    </span>
+                                </td>
+                            </tr>`;
+                    }).join('');
+                }
+
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+
+                document.getElementById('recentReservationsBody').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            Failed to load dashboard data.
+                            Check the browser console.
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        loadDashboard();
+    </script>
+}

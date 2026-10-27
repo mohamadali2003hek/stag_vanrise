@@ -16,21 +16,38 @@
     <nav class="navbar navbar-default">
         <div class="container">
             <div class="navbar-header">
-                <a class="navbar-brand" href="@Url.Action("Index", "Devices")">Stage </a>
+                <a class="navbar-brand" href="@Url.Action("Index", "Dashboard")">Stage </a>
             </div>
             <ul class="nav navbar-nav">
+
                 <li class="@(controller == "Devices" ? "active" : "")">
                     <a href="@Url.Action("Index", "Devices")">Devices</a>
                 </li>
+
                 <li class="@(controller == "Clients" ? "active" : "")">
                     <a href="@Url.Action("Index", "Clients")">Clients</a>
                 </li>
+
                 <li class="@(controller == "PhoneNumbers" ? "active" : "")">
                     <a href="@Url.Action("Index", "PhoneNumbers")">Phone Numbers</a>
                 </li>
+
                 <li class="@(controller == "PhoneNumberReservations" ? "active" : "")">
                 <a href="@Url.Action("Index", "PhoneNumberReservations")">Reservations</a>
                 </li>
+
+                <li class="@(controller == "Reports" || controller == "ClientsReport" ? "active" : "")">
+                    <a href="@Url.Action("PhoneNumberStatus", "Reports")">
+                        Phone Number Status Report
+                    </a>
+                </li>
+
+                <li class="@(controller == "ClientsReport" ? "active" : "")">
+                    <a href="@Url.Action("ClientsPerType", "ClientsReport")">
+                        Clients Per Type Report
+                    </a>
+                </li>
+
             </ul>
         </div>
     </nav>

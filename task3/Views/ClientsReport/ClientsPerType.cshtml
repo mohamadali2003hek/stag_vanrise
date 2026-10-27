@@ -1,0 +1,72 @@
+﻿
+@model List<task3.Models.ClientsPerTypeReport>
+
+@{
+    ViewData["Title"] = "Clients Per Type Report";
+}
+
+<h2>Clients Per Type Report</h2>
+
+<form asp-controller="ClientsReport"
+      asp-action="ClientsPerType"
+      method="get">
+
+    <label for="type">Client Type</label>
+
+    <select id="type" name="type" class="form-select">
+        <option value="">All Types</option>
+
+        @if (ViewBag.SelectedType is int selectedType && selectedType == 0)
+        {
+            <option value="0" selected>Individual</option>
+        }
+        else
+        {
+            <option value="0">Individual</option>
+        }
+
+        @if (ViewBag.SelectedType is int selectedType2 && selectedType2 == 1)
+        {
+            <option value="1" selected>Organization</option>
+        }
+        else
+        {
+            <option value="1">Organization</option>
+        }
+    </select>
+
+    <button type="submit" class="btn btn-primary mt-2">Filter</button>
+
+    <a asp-controller="ClientsReport"
+       asp-action="ClientsPerType"
+       class="btn btn-secondary mt-2">Reset</a>
+</form>
+
+<table class="table table-bordered table-striped mt-4">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>No of Clients</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Count > 0)
+        {
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @(item.Type == 0 ? "Individual" : "Organization")
+                    </td>
+                    <td>@item.NumberOfClients</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="2" class="text-center">No results found.</td>
+            </tr>
+        }
+    </tbody>
+</table>

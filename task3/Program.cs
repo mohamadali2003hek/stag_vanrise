@@ -12,6 +12,8 @@ builder.Services.AddScoped<ClientMapper>();
 builder.Services.AddScoped<PhoneNumberMapper>();
 builder.Services.AddScoped<PhoneNumberMapperdto>();
 
+
+
 builder.Services.AddScoped<SqlConnection>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
@@ -38,7 +40,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Devices}/{action=Index}/{id?}")
+    pattern: "{controller=Dashboard}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 

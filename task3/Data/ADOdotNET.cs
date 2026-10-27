@@ -599,6 +599,96 @@ namespace task3.Data
                 connection.Open();
         }
 
+
+
+        public List<PhoneNumberStatusReport> GetPhoneNumberStatusReport(
+    int? deviceID = null,
+    string phoneNumberStatus = null)
+        {
+            var list = new List<PhoneNumberStatusReport>();
+
+            using (var command = new SqlCommand(
+                "GetPhoneNumberStatusReport", connection))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("@DeviceID", SqlDbType.Int)
+                .Value = (object)deviceID ?? DBNull.Value;
+
+                command.Parameters.Add("@PhoneNumberStatus", SqlDbType.NVarChar, 20)
+                    .Value = (object)phoneNumberStatus ?? DBNull.Value;
+
+                try
+                {
+                    OpenConnection();
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new PhoneNumberStatusReport
+                            {
+                                Device = reader.GetString(
+                                    reader.GetOrdinal("Device")),
+
+                                PhoneNumbersStatus = reader.GetString(
+                                    reader.GetOrdinal("PhoneNumbersStatus")),
+
+                                NumberOfPhoneNumbers = reader.GetInt32(
+                                    reader.GetOrdinal("NumberOfPhoneNumbers"))
+                            });
+                        }
+                    }
+                }
+                finally
+                {
+                    connection.Close();
+                }
+            }
+
+            return list;
+        }
+
+
+
+
+        public List<ClientsPerTypeReport> GetClientsPerTypeReport(int? type = null)
+        {
+            var list = new List<ClientsPerTypeReport>();
+
+            using (var command = new SqlCommand("GetClientsPerTypeReport", connection))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("@Type", SqlDbType.Int)
+                    .Value = (object)type ?? DBNull.Value;
+
+                try
+                {
+                    OpenConnection();
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new ClientsPerTypeReport
+                            {
+                                Type = reader.GetInt32(reader.GetOrdinal("Type")),
+                                NumberOfClients = reader.GetInt32(
+                                    reader.GetOrdinal("NumberOfClients"))
+                            });
+                        }
+                    }
+                }
+                finally
+                {
+                    connection.Close();
+                }
+            }
+
+            return list;
+        }
+
     } // end of ADOdotNET
 
 
